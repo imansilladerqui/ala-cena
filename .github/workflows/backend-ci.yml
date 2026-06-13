@@ -35,6 +35,8 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - name: Install dependencies
+        env:
+          CI: true
         run: pnpm install --frozen-lockfile
 
       - name: Build
@@ -57,6 +59,8 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - name: Install dependencies
+        env:
+          CI: true
         run: pnpm install --frozen-lockfile
 
       - name: Audit (high severity)
