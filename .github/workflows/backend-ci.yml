@@ -1,0 +1,64 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'scripts/check-secrets.sh'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'scripts/check-secrets.sh'
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  build:
+    name: Build & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit (high severity)
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
