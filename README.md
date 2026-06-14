@@ -50,5 +50,19 @@ Los pipelines se activan solo cuando cambian archivos del proyecto correspondien
 
 ## Despliegue
 
-- **Backend**: Railway con Root Directory = `backend`
-- **App**: EAS Build desde `mobile/` → App Store / Google Play
+### Backend (Railway)
+
+Railpack necesita un `package.json` en el directorio de build. Si el servicio apunta al repo raíz, el build falla (solo ve `scripts/`, `.gitignore`, `README.md`).
+
+En **Service → Settings**:
+
+| Campo | Valor |
+|-------|-------|
+| **Root Directory** | `backend` |
+| **Config file path** | `/backend/railway.toml` (si Railway no detecta el config solo) |
+
+Build/start ya están en `backend/railway.toml` (`pnpm build` → `node dist/index.js`). Healthcheck: `/health`.
+
+### Mobile
+
+- EAS Build desde `mobile/` → App Store / Google Play

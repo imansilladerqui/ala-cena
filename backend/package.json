@@ -12,6 +12,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.3",
