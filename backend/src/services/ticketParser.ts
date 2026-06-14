@@ -1,4 +1,5 @@
 import type { ScannedItem } from '../types/api'
+import { normalizePantryName } from './ingredients'
 
 /** Líneas de ticket (ca/es) que no son productos */
 const SKIP_LINE =
@@ -11,123 +12,6 @@ const PRICE_ONLY = /^\d+[.,]\d{2}\s*€?\s*([ABC])?\s*$/i
 const BARCODE = /^\d{8,}$/
 const DATE_LINE = /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/
 const LETTERS = /[a-zàèéíïòóúüçñA-ZÀÈÉÍÏÒÓÚÜÇÑ]/
-
-/** Catalán → español (términos habituales en ticket de super) */
-const CA_TO_ES: Record<string, string> = {
-  llet: 'leche',
-  ous: 'huevos',
-  ou: 'huevo',
-  pa: 'pan',
-  pans: 'panes',
-  panet: 'panecillo',
-  tomàquet: 'tomate',
-  tomaquet: 'tomate',
-  tomàquets: 'tomates',
-  patata: 'patata',
-  patates: 'patatas',
-  formatge: 'queso',
-  edam: 'queso edam',
-  iogurt: 'yogur',
-  pollastre: 'pollo',
-  vedella: 'ternera',
-  porc: 'cerdo',
-  peix: 'pescado',
-  arròs: 'arroz',
-  oli: 'aceite',
-  oliva: 'aceituna',
-  sucre: 'azúcar',
-  llimona: 'limón',
-  llimones: 'limones',
-  platan: 'plátano',
-  plàtan: 'plátano',
-  poma: 'manzana',
-  pomes: 'manzanas',
-  pera: 'pera',
-  peres: 'peras',
-  enciam: 'lechuga',
-  ceba: 'cebolla',
-  ceves: 'cebollas',
-  all: 'ajo',
-  gambes: 'gambas',
-  salmó: 'salmón',
-  tonyina: 'atún',
-  pernil: 'jamón',
-  embotit: 'embutido',
-  salsitxes: 'salchichas',
-  farina: 'harina',
-  mantega: 'mantequilla',
-  nata: 'nata',
-  cafè: 'café',
-  te: 'té',
-  aigua: 'agua',
-  suc: 'zumo',
-  pinya: 'piña',
-  maduixa: 'fresa',
-  maduixes: 'fresas',
-  raïm: 'uvas',
-  raïms: 'uvas',
-  pastanaga: 'zanahoria',
-  pastanagues: 'zanahorias',
-  cogombre: 'pepino',
-  cogombret: 'pepinillo',
-  pebrot: 'pimiento',
-  pebrots: 'pimientos',
-  mongeta: 'judía',
-  mongetes: 'judías',
-  cigró: 'garbanzo',
-  cigrons: 'garbanzos',
-  llenties: 'lentejas',
-  sèmola: 'sémola',
-  pasta: 'pasta',
-  macarrons: 'macarrones',
-  espaguetis: 'espaguetis',
-  sopa: 'sopa',
-  brou: 'caldo',
-  peixos: 'pescado',
-  marisc: 'marisco',
-  congelat: 'congelado',
-  fresc: 'fresco',
-  integral: 'integral',
-  sencera: 'entera',
-  sencer: 'entero',
-  semidesnatada: 'semidesnatada',
-  light: 'light',
-  zero: 'zero',
-  unitat: 'unidad',
-  unitats: 'unidades',
-  llauna: 'lata',
-  ampolla: 'botella',
-  bossa: 'bolsa',
-  paquet: 'paquete',
-  prèssec: 'melocotón',
-  pressec: 'melocotón',
-  salmorejo: 'salmorejo',
-  reganya: 'regaña',
-  reganyes: 'regañas',
-  aletes: 'alitas',
-  blat: 'maíz',
-  espetec: 'espetec',
-  xocolata: 'chocolate',
-  burger: 'hamburguesa',
-  meat: 'carne',
-}
-
-function normalizeProductName(raw: string): string {
-  let name = raw
-    .replace(/\s+/g, ' ')
-    .replace(/\*+/g, '')
-    .replace(/\b\d{5,}\b/g, '')
-    .trim()
-
-  const words = name.split(' ')
-  const normalized = words.map(word => {
-    const lower = word.toLowerCase()
-    return CA_TO_ES[lower] ?? word
-  })
-
-  name = normalized.join(' ')
-  return name.charAt(0).toUpperCase() + name.slice(1)
-}
 
 function isDiscountOrPromo(line: string): boolean {
   const t = line.trim()
@@ -166,7 +50,7 @@ function parseLidlLine(line: string): ScannedItem | null {
   const qty = match[3] ? parseInt(match[3], 10) : 1
 
   return {
-    name: normalizeProductName(name),
+    name: normalizePantryName(name),
     quantity: qty > 0 ? qty : 1,
     unit: 'ud',
   }
@@ -185,7 +69,7 @@ function parseTicketLine(line: string): ScannedItem {
     return {
       quantity: parseFloat(weightLeading[1]!.replace(',', '.')),
       unit: weightLeading[2]!.toLowerCase().replace(/\./g, ''),
-      name: normalizeProductName(weightLeading[3]!),
+      name: normalizePantryName(weightLeading[3]!),
     }
   }
 
@@ -194,11 +78,11 @@ function parseTicketLine(line: string): ScannedItem {
     return {
       quantity: parseInt(qtyLeading[1]!, 10),
       unit: null,
-      name: normalizeProductName(qtyLeading[2]!),
+      name: normalizePantryName(qtyLeading[2]!),
     }
   }
 
-  return { name: normalizeProductName(trimmed), quantity: 1, unit: null }
+  return { name: normalizePantryName(trimmed), quantity: 1, unit: null }
 }
 
 function dedupeItems(items: ScannedItem[]): ScannedItem[] {
@@ -227,7 +111,6 @@ export function parseTicketText(fullText: string): ScannedItem[] {
     const line = lines[i]!
     if (!isProductLine(line)) continue
 
-    // Mercadona: nombre en una línea, precio en la siguiente
     if (i + 1 < lines.length && PRICE_ONLY.test(lines[i + 1]!)) {
       products.push(parseTicketLine(line))
       continue

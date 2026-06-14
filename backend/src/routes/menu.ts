@@ -35,8 +35,8 @@ menuRouter.get(
 
     const { rows: profiles } = await pool.query('SELECT name, restrictions FROM profiles')
 
-    const ingredients = pantry.map((p: { name: string }) => p.name)
-    const rawRecipes = await findRecipesByIngredients(ingredients)
+    const pantryNames = pantry.map((p: { name: string }) => p.name)
+    const rawRecipes = await findRecipesByIngredients(pantryNames)
 
     if (rawRecipes.length === 0) {
       throw new AppError(

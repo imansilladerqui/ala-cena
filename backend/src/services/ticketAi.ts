@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { ScannedItem } from '../types/api'
+import { normalizePantryName } from './ingredients'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 
@@ -64,7 +65,7 @@ ${ocrText.slice(0, 8000)}`
           (row as { name: string }).name.trim().length > 1
       )
       .map(row => ({
-        name: row.name.trim(),
+        name: normalizePantryName(row.name.trim()),
         quantity: typeof row.quantity === 'number' && row.quantity > 0 ? row.quantity : 1,
         unit: row.unit && typeof row.unit === 'string' ? row.unit.toLowerCase() : null,
       }))

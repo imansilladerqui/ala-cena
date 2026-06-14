@@ -3,6 +3,7 @@ import { pool } from '../db'
 import { extractTicketItems } from '../services/ocr'
 import { asyncHandler } from '../utils/asyncHandler'
 import { AppError } from '../utils/AppError'
+import { normalizePantryName } from '../services/ingredients'
 import type { ScannedItem } from '../types/api'
 
 export const pantryRouter = Router()
@@ -26,7 +27,7 @@ pantryRouter.post(
     }
     const { rows } = await pool.query(
       'INSERT INTO pantry (name, quantity, unit, expires_at) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name.trim(), quantity ?? 1, unit ?? null, expires_at ?? null]
+      [normalizePantryName(name.trim()), quantity ?? 1, unit ?? null, expires_at ?? null]
     )
     res.status(201).json(rows[0])
   })
@@ -104,7 +105,7 @@ pantryRouter.post(
         pool
           .query(
             'INSERT INTO pantry (name, quantity, unit) VALUES ($1, $2, $3) RETURNING *',
-            [item.name.trim(), item.quantity ?? 1, item.unit ?? null]
+            [normalizePantryName(item.name.trim()), item.quantity ?? 1, item.unit ?? null]
           )
           .then(r => r.rows[0])
       )
