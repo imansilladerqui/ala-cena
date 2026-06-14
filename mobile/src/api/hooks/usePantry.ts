@@ -34,6 +34,17 @@ export function useDeletePantryItem() {
   })
 }
 
+export function useClearPantry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.clearPantry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pantry'] })
+      qc.invalidateQueries({ queryKey: ['menu'] })
+    },
+  })
+}
+
 export function useScanTicket() {
   return useMutation({
     mutationFn: (imageBase64: string) => api.scanTicket(imageBase64),

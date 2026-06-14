@@ -16,6 +16,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import {
   useAddPantryItem,
+  useClearPantry,
   useDeletePantryItem,
   usePantry,
   useUpdatePantryItem,
@@ -28,6 +29,7 @@ export default function PantryScreen() {
   const addItem = useAddPantryItem();
   const updateItem = useUpdatePantryItem();
   const deleteItem = useDeletePantryItem();
+  const clearPantry = useClearPantry();
 
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
@@ -58,6 +60,27 @@ export default function PantryScreen() {
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo actualizar');
     }
+  };
+
+  const handleClearPantry = () => {
+    Alert.alert(
+      'Vaciar alacena',
+      '¿Eliminar todos los productos? Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Vaciar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearPantry.mutateAsync();
+            } catch (e) {
+              Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo vaciar la alacena');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleDelete = (id: number, itemName: string) => {
@@ -101,6 +124,16 @@ export default function PantryScreen() {
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.tint} />}>
+        {!!items?.length && (
+          <Pressable
+            style={[styles.clearBtn, { borderColor: colors.border }]}
+            onPress={handleClearPantry}
+            disabled={clearPantry.isPending}>
+            <Text style={{ color: '#c44', fontWeight: '600' }}>
+              {clearPantry.isPending ? 'Vaciando...' : 'Vaciar alacena'}
+            </Text>
+          </Pressable>
+        )}
         {!items?.length && (
           <Text style={[styles.empty, { color: colors.muted }]}>
             La alacena está vacía. Añade productos manualmente o escanea un ticket.
@@ -185,6 +218,7 @@ export default function PantryScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   list: { padding: 16, paddingBottom: 100 },
+  clearBtn: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderRadius: 10 },
   empty: { textAlign: 'center', marginTop: 40, lineHeight: 22 },
   card: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 10 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

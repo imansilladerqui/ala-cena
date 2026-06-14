@@ -57,6 +57,15 @@ pantryRouter.patch(
 )
 
 pantryRouter.delete(
+  '/clear',
+  asyncHandler(async (_req, res) => {
+    await pool.query('DELETE FROM pantry')
+    await pool.query('DELETE FROM menu_proposals WHERE proposed_at = CURRENT_DATE')
+    res.json({ ok: true })
+  })
+)
+
+pantryRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
     const { rowCount } = await pool.query('DELETE FROM pantry WHERE id = $1', [req.params.id])

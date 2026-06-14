@@ -16,8 +16,11 @@ menuRouter.get(
       `SELECT recipes FROM menu_proposals WHERE proposed_at = CURRENT_DATE ORDER BY id DESC LIMIT 1`
     )
     if (cached[0]) {
-      res.json({ proposals: cached[0].recipes as MenuProposal[] })
-      return
+      const recipes = cached[0].recipes as MenuProposal[]
+      if (recipes.every(r => r.missedIngredientCount === 0)) {
+        res.json({ proposals: recipes })
+        return
+      }
     }
 
     const { rows: pantry } = await pool.query('SELECT name FROM pantry WHERE quantity > 0')
@@ -34,6 +37,14 @@ menuRouter.get(
 
     const ingredients = pantry.map((p: { name: string }) => p.name)
     const rawRecipes = await findRecipesByIngredients(ingredients)
+
+    if (rawRecipes.length === 0) {
+      throw new AppError(
+        404,
+        'No hay recetas que se puedan hacer solo con lo que tienes en la alacena',
+        'NO_COMPLETE_RECIPES'
+      )
+    }
 
     const ordered = await personalizeMenu({
       recipes: rawRecipes,

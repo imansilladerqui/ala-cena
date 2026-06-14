@@ -2,6 +2,8 @@ import axios from 'axios'
 import fs from 'fs'
 import type { ScannedItem } from '../types/api'
 import { AppError } from '../utils/AppError'
+import { parseTicketWithAi } from './ticketAi'
+import { parseTicketText } from './ticketParser'
 
 function getVisionApiKey(): string {
   if (process.env.GOOGLE_VISION_API_KEY) {
@@ -26,59 +28,57 @@ function getVisionApiKey(): string {
   )
 }
 
-function parseTicketLine(line: string): ScannedItem {
-  const trimmed = line.trim()
-
-  const qtyUnitMatch = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|ud|u|un)?\s+(.+)$/i)
-  if (qtyUnitMatch) {
-    return {
-      quantity: parseFloat(qtyUnitMatch[1]!.replace(',', '.')),
-      unit: qtyUnitMatch[2]?.toLowerCase() ?? null,
-      name: qtyUnitMatch[3]!.trim(),
-    }
-  }
-
-  const trailingQty = trimmed.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml)?$/i)
-  if (trailingQty) {
-    return {
-      name: trailingQty[1]!.trim(),
-      quantity: parseFloat(trailingQty[2]!.replace(',', '.')),
-      unit: trailingQty[3]?.toLowerCase() ?? null,
-    }
-  }
-
-  return { name: trimmed, quantity: 1, unit: null }
-}
-
-export async function extractTicketItems(imageBase64: string): Promise<ScannedItem[]> {
+async function extractTextFromImage(base64: string): Promise<string> {
   const apiKey = getVisionApiKey()
-  const base64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
 
   const { data } = await axios.post(
     `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
     {
       requests: [{
         image: { content: base64 },
-        features: [{ type: 'TEXT_DETECTION' }],
+        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+        imageContext: {
+          languageHints: ['ca', 'es'],
+        },
       }],
     }
   )
 
-  const fullText: string = data.responses?.[0]?.fullTextAnnotation?.text ?? ''
-  if (!fullText) {
+  const response = data.responses?.[0]
+  if (response?.error) {
+    throw new AppError(502, 'Error de Google Vision', 'VISION_API_ERROR')
+  }
+
+  return (
+    response?.fullTextAnnotation?.text ??
+    response?.textAnnotations?.[0]?.description ??
+    ''
+  )
+}
+
+export async function extractTicketItems(imageBase64: string): Promise<ScannedItem[]> {
+  const base64 = imageBase64.replace(/^data:image\/\w+;base64,/, '')
+  const fullText = await extractTextFromImage(base64)
+
+  if (!fullText.trim()) {
     throw new AppError(422, 'No se detectó texto en la imagen', 'NO_TEXT_DETECTED')
   }
 
-  const products = fullText
-    .split('\n')
-    .map((line: string) => line.trim())
-    .filter((line: string) =>
-      line.length > 2 &&
-      /[a-záéíóúñA-ZÁÉÍÓÚÑ]/.test(line) &&
-      !/^(total|iva|subtotal|ticket|fecha|caja|efectivo|tarjeta|cambio)/i.test(line) &&
-      !/^\d+[.,]\d{2}\s*€?$/.test(line)
-    )
-    .map(parseTicketLine)
+  // IA (si hay ANTHROPIC_API_KEY): mejor con catalán y OCR sucio
+  const aiItems = await parseTicketWithAi(fullText)
+  if (aiItems && aiItems.length > 0) {
+    return aiItems
+  }
 
-  return products
+  // Fallback: reglas + diccionario catalán→español
+  const ruleItems = parseTicketText(fullText)
+  if (ruleItems.length > 0) {
+    return ruleItems
+  }
+
+  throw new AppError(
+    422,
+    'No se detectaron productos en el ticket. Intenta con mejor luz y el ticket completo.',
+    'NO_PRODUCTS_DETECTED'
+  )
 }

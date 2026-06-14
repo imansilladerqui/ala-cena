@@ -24,12 +24,15 @@ export async function findRecipesByIngredients(ingredients: string[]): Promise<M
     params: {
       apiKey: KEY,
       ingredients: ingredients.join(','),
-      number: 5,
+      number: 30,
       ranking: 1,
       ignorePantry: true,
     },
   })
-  return (data as Record<string, unknown>[]).map(enrichRecipe)
+  return (data as Record<string, unknown>[])
+    .map(enrichRecipe)
+    .filter(recipe => recipe.missedIngredientCount === 0)
+    .slice(0, 5)
 }
 
 export async function getRecipeDetails(id: number): Promise<Record<string, unknown>> {

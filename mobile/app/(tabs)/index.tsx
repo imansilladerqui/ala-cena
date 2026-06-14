@@ -87,7 +87,9 @@ export default function TodayScreen() {
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.tint} />}>
         <Text style={[styles.heading, { color: colors.text }]}>¿Qué cocinamos hoy?</Text>
         {!proposals?.length && (
-          <Text style={[styles.empty, { color: colors.muted }]}>No hay propuestas. Añade productos a la alacena.</Text>
+          <Text style={[styles.empty, { color: colors.muted }]}>
+            No hay recetas que puedas hacer solo con lo de la alacena (sin comprar nada más).
+          </Text>
         )}
         {proposals?.map(recipe => (
           <View key={recipe.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -96,24 +98,15 @@ export default function TodayScreen() {
             ) : null}
             <View style={styles.cardBody}>
               <Text style={[styles.title, { color: colors.text }]}>{recipe.title}</Text>
-              <View style={[styles.badge, { backgroundColor: colors.tint + '22' }]}>
-                <Text style={[styles.badgeText, { color: colors.tint }]}>
-                  {recipe.ingredientSummary?.have ?? recipe.usedIngredientCount}/
-                  {recipe.ingredientSummary?.need ?? recipe.usedIngredientCount + recipe.missedIngredientCount} ingredientes
+              <View style={[styles.badge, { backgroundColor: colors.success + '22' }]}>
+                <Text style={[styles.badgeText, { color: colors.success }]}>
+                  Solo con tu alacena · {recipe.usedIngredientCount} ingredientes
                 </Text>
               </View>
-              <Text style={[styles.sectionLabel, { color: colors.muted }]}>Tienes:</Text>
-              {recipe.usedIngredients.slice(0, 4).map((ing, i) => (
+              <Text style={[styles.sectionLabel, { color: colors.muted }]}>Ingredientes:</Text>
+              {recipe.usedIngredients.slice(0, 6).map((ing, i) => (
                 <Text key={i} style={[styles.ingredient, { color: colors.success }]}>✓ {ing.name}</Text>
               ))}
-              {recipe.missedIngredients.length > 0 && (
-                <>
-                  <Text style={[styles.sectionLabel, { color: colors.muted }]}>Faltan:</Text>
-                  {recipe.missedIngredients.slice(0, 3).map((ing, i) => (
-                    <Text key={i} style={[styles.ingredient, { color: colors.muted }]}>· {ing.name}</Text>
-                  ))}
-                </>
-              )}
               <Pressable
                 style={[styles.button, { backgroundColor: colors.tint }]}
                 onPress={() => handleChoose(recipe)}

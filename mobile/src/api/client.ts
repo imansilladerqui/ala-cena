@@ -40,6 +40,8 @@ export const api = {
   deletePantryItem: (id: number) =>
     request<{ ok: boolean }>(`/pantry/${id}`, { method: 'DELETE' }),
 
+  clearPantry: () => request<{ ok: boolean }>('/pantry/clear', { method: 'DELETE' }),
+
   scanTicket: (imageBase64: string) =>
     request<{ detected: ScannedItem[] }>('/pantry/scan', {
       method: 'POST',
